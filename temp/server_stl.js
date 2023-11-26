@@ -8,7 +8,7 @@ const wss = new WebSocket.Server({ port: 8080 });
 const path = require('path');
 
 function sendSTLFileToClient(client) {
-    fs.readFile('./Voron_Design_Cube_v7.stl', (err, data) => {
+    fs.readFile('./hask.stl', (err, data) => {
         if (err) throw err;
         if (client.readyState === WebSocket.OPEN) {
             client.send(data);
@@ -29,20 +29,10 @@ wss.on('connection', ws => {
     });
 });
 
-
-// wss.on('connection', ws => {
-//     // fs.readFile('./3DBenchy.stl', (err, data) => {
-//     fs.readFile('./Voron_Design_Cube_v7.stl', (err, data) => {
-//         if (err) throw err;
-//         ws.send(data);
-//     });
-// });
-
-
 server.listen(3000, function listening() {
     console.log('Listening on %d', server.address().port);
 
-    fs.watch('./Voron_Design_Cube_v7.stl', (eventType, filename) => {
+    fs.watch('./hask.stl', (eventType, filename) => {
         if (eventType === 'change') {
             console.log(`File ${filename} has been changed, sending new data to clients.`);
             clients.forEach(client => {
@@ -52,10 +42,3 @@ server.listen(3000, function listening() {
     });
 
 });
-
-
-
-
-
-
-
