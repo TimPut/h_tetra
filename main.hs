@@ -6,7 +6,6 @@ import Linear.V3
 import Linear
 import Data.Vector.Unboxed qualified as V
 import Data.ByteString.Char8 qualified as BS
--- import Data.ByteString.Lazy qualified as L
 
 mkNormal :: Triangle -> Normal
 mkNormal (V3 a b c) = let normal = (b - a) `cross` (c - a)
@@ -36,7 +35,7 @@ tetTris (V4 a b c d) = [ V3 b c d
                        ]
 
 projective (V3 a b c) = V4 a b c 1
--- pointInTet :: V3 Float -> Tetra -> _
+
 pointInTet p t@(V4 v1 v2 v3 v4) =
   let
     d0 = det44 . fmap projective $ t
@@ -46,7 +45,6 @@ pointInTet p t@(V4 v1 v2 v3 v4) =
     d4 = det44 . fmap projective $ V4 v1 v2 v3 p
   in (d0,d1,d2,d3,d4)
 
--- Calculate the area of a triangle given its vertices
 triangleArea :: V3 Float -> V3 Float -> V3 Float -> Float
 triangleArea a b c = let s = (ab + bc + ca) / 2
                      in sqrt (s * (s - ab) * (s - bc) * (s - ca))
@@ -55,11 +53,9 @@ triangleArea a b c = let s = (ab + bc + ca) / 2
     bc = distance b c
     ca = distance c a
 
--- Calculate the volume of a tetrahedron given its vertices
 tetrahedronVolume :: V3 Float -> V3 Float -> V3 Float -> V3 Float -> Float
 tetrahedronVolume a b c d = abs ((dot (b - a) (cross (c - a) (d - a))) / 6)
 
--- Calculate the incenter of a tetrahedron
 incenter :: V3 Float -> V3 Float -> V3 Float -> V3 Float -> V3 Float
 incenter a b c d = let sABC = triangleArea a b c
                        sABD = triangleArea a b d
@@ -68,7 +64,6 @@ incenter a b c d = let sABC = triangleArea a b c
                        totalArea = sABC + sABD + sACD + sBCD
                    in (sBCD *^ a + sACD *^ b + sABD *^ c + sABC *^ d) ^/ totalArea
 
--- Calculate the radius of the incircle
 inradius :: V3 Float -> V3 Float -> V3 Float -> V3 Float -> Float
 inradius a b c d = let vol = tetrahedronVolume a b c d
                        sABC = triangleArea a b c
@@ -78,8 +73,6 @@ inradius a b c d = let vol = tetrahedronVolume a b c d
                        totalArea = sABC + sABD + sACD + sBCD
                    in 3 * vol / totalArea
 
--- Calculate the circumcenter of a tetrahedron
--- circumcenter :: V4 (V3 Float) -> V3 Float
 circumcenter t@(V4 v1 v2 v3 v4) =
   let
     a = det44 . fmap projective $ t
@@ -113,12 +106,6 @@ circumcenter t@(V4 v1 v2 v3 v4) =
     (x,y,z) = (dx/(2*a), dy/(2*a), dy/(2*a))
     r = sqrt(dx**2+dy**2+dz**2-4*a*c)/(2*abs(a))
   in (r,V3 x y z)
-
-
-
--- Calculate the radius of the circumcircle
-circumradius :: V3 Float -> V3 Float -> V3 Float -> V3 Float -> Float
-circumradius a b c d = undefined -- This requires more complex geometric calculations
 
 exampleTet = fmap (\v -> v + V3 1.4 0 0) unitTetrahedron
 
