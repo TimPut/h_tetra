@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader';
 
 let scene, camera, renderer;
 
@@ -13,7 +14,7 @@ function onWindowResize() {
     renderer.setSize(width, height);
 };
 
-function init() {
+function init(geometry) {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer();
@@ -30,9 +31,6 @@ function init() {
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = false;
     controls.maxPolarAngle = Math.PI / 2;
-
-    // GLTF Setup
-    const loader = new GLTFLoader();
 
     // Materials
     const faceFrontMaterial = new THREE.MeshBasicMaterial({
@@ -60,7 +58,7 @@ function init() {
     });
 
     // Geometry
-    const geometry = new THREE.BufferGeometry();
+    // const geometry = new THREE.BufferGeometry();
 
     const vertices = new Float32Array( [
 	-1.0, -1.0,  1.0, // v0
@@ -77,8 +75,8 @@ function init() {
 	2, 3, 0,
     ];
 
-    geometry.setIndex( indices );
-    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    // geometry.setIndex( indices );
+    // geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
 
     const cube = new THREE.Mesh(geometry, faceFrontMaterial);
     cube.add(new THREE.Mesh(geometry, faceBackMaterial));
@@ -89,7 +87,7 @@ function init() {
     const wireframeMesh = new THREE.LineSegments(wireframe, wireframeMaterial);
 
     // Vertices
-    const vertexGeometry = new THREE.SphereGeometry(0.04); // Small sphere
+    const vertexGeometry = new THREE.SphereGeometry(0.2,4,4); // Small sphere
 
     // Add face data to scene
     scene.add(cube);
@@ -100,6 +98,7 @@ function init() {
 
     // Add edge data to scene
     const edges = new Set(); // Use a Set to avoid duplicate edges
+
 
     for (let i = 0; i < indexAttribute.count; i += 3) {
         const a = indexAttribute.getX(i);
@@ -121,7 +120,7 @@ function init() {
         const endVertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, endIdx);
         
         const path = new THREE.LineCurve3(startVertex, endVertex);
-        const tubeGeometry = new THREE.TubeGeometry(path, 1, 0.015, 4, false);
+        const tubeGeometry = new THREE.TubeGeometry(path, 1, 0.015, 3, false);
         const tubeMesh = new THREE.Mesh(tubeGeometry, wireframeMaterial);
         cube.add(tubeMesh);
     });
@@ -137,9 +136,7 @@ function init() {
     }
 
 
-
-
-    camera.position.z = 5;
+    camera.position.z = 100;
 
     window.addEventListener('resize', onWindowResize, false);
 
@@ -151,15 +148,61 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-init();
+function convertToIndexedBufferGeometry(geometry) {
+    // If geometry is already indexed, return it
+    if (geometry.index) return geometry;
 
-const ws = new WebSocket('ws://localhost:3000');
+    // Create a new BufferGeometry
+    const indexedGeometry = new THREE.BufferGeometry();
+
+    // Get position attribute
+    const positions = geometry.attributes.position.array;
+
+    // Create an array to hold unique vertices and an array for indices
+    const uniqueVertices = [];
+    const indices = [];
+
+    for (let i = 0; i < positions.length; i += 9) {
+        for (let j = 0; j < 9; j += 3) {
+            const vertex = new THREE.Vector3(positions[i + j], positions[i + j + 1], positions[i + j + 2]);
+
+            // Check if this vertex is unique
+            let index = uniqueVertices.findIndex(uniqueVertex =>
+                uniqueVertex.equals(vertex)
+            );
+
+            // If it's a new unique vertex, push it to uniqueVertices
+            if (index === -1) {
+                uniqueVertices.push(vertex);
+                index = uniqueVertices.length - 1;
+            }
+
+            // Push the index of the vertex
+            indices.push(index);
+        }
+    }
+
+    // Set the attributes and index of the indexedGeometry
+    indexedGeometry.setIndex(indices);
+    indexedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(uniqueVertices.flatMap(v => v.toArray()), 3));
+
+    return indexedGeometry;
+}
+
+
+const ws = new WebSocket('ws://localhost:8080');
+ws.binaryType = 'arraybuffer'; // Important for receiving binary data
 
 ws.onopen = function() {
     console.log('WebSocket Client Connected');
     ws.send('Hi this is web client.');
 };
 
-ws.onmessage = function(e) {
-    console.log("Received: '" + e.data + "'");
+ws.onmessage = function (event) {
+    const loader = new STLLoader();
+    const buffer = event.data;
+    const raw_geometry = loader.parse(buffer);
+    const geometry = convertToIndexedBufferGeometry(raw_geometry);
+    init(geometry);
 };
+
