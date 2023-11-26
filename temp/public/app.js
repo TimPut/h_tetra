@@ -14,70 +14,16 @@ function onWindowResize() {
     renderer.setSize(width, height);
 };
 
-function init(geometry) {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer();
-    
-    // Background color (over white implicit background)
-    renderer.setClearColor( 0xCFCDBE );
+function render() {
+    renderer.render(scene, camera);
+}
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // OrbitControls setup
-    const controls = new OrbitControls( camera, renderer.domElement );
-    controls.enableDamping = true; // Optional, but makes the control smoother
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
-    controls.maxPolarAngle = Math.PI / 2;
-
-    // Materials
-    const faceFrontMaterial = new THREE.MeshBasicMaterial({
-        color: 0x43AA8B,
-        transparent: true,
-        opacity: 0.5
-    });
-
-    const faceBackMaterial = new THREE.MeshBasicMaterial({
-        color: 0x4378AB,
-        transparent: true,
-        opacity: 0.5,
-        side: THREE.BackSide
-    });
-
-
-    const wireframeMaterial = new THREE.LineBasicMaterial({
-        color: 0xFF6F59,
-    });
-
-    const vertexMaterial = new THREE.MeshBasicMaterial({
-        color: 0x254441
-        // depthTest: false
-
-    });
+function placeModel(geometry) {
+    while(scene.children.length > 0){ 
+        scene.remove(scene.children[0]); 
+    }
 
     // Geometry
-    // const geometry = new THREE.BufferGeometry();
-
-    const vertices = new Float32Array( [
-	-1.0, -1.0,  1.0, // v0
-	 1.0, -1.0,  1.0, // v1
-	 1.0,  1.0,  1.0, // v2
-        
-	-1.0,  1.0,  1.0, // v3
-	-1.0,  1.0,  1.0, // v4
-	-1.0, -1.0,  1.0  // v5
-    ] );
-
-    const indices = [
-	0, 1, 2,
-	2, 3, 0,
-    ];
-
-    // geometry.setIndex( indices );
-    // geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-
     const cube = new THREE.Mesh(geometry, faceFrontMaterial);
     cube.add(new THREE.Mesh(geometry, faceBackMaterial));
 
@@ -91,7 +37,6 @@ function init(geometry) {
 
     // Add face data to scene
     scene.add(cube);
-
 
     const indexAttribute = geometry.index;
     const positionAttribute = geometry.attributes.position;
@@ -134,17 +79,64 @@ function init(geometry) {
         vertexMesh.position.copy(vertex);
         cube.add(vertexMesh);
     }
+};
+
+    // Materials
+const faceFrontMaterial = new THREE.MeshBasicMaterial({
+    color: 0x43AA8B,
+    transparent: true,
+    opacity: 0.5
+});
+
+const faceBackMaterial = new THREE.MeshBasicMaterial({
+    color: 0x4378AB,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.BackSide
+});
 
 
+const wireframeMaterial = new THREE.LineBasicMaterial({
+    color: 0xFF6F59,
+});
+
+const vertexMaterial = new THREE.MeshBasicMaterial({
+    color: 0x254441
+    // depthTest: false
+    
+});
+
+function init(geometry) {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    window.addEventListener('resize', onWindowResize, false);
+    renderer = new THREE.WebGLRenderer();
+    
+    // Background color (over white implicit background)
+    renderer.setClearColor( 0xCFCDBE );
     camera.position.z = 100;
 
-    window.addEventListener('resize', onWindowResize, false);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    animate();
+    // OrbitControls setup
+    const controls = new OrbitControls( camera, renderer.domElement );
+    // controls.enableDamping = true; // Optional, but makes the control smoother
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.maxPolarAngle = Math.PI / 2;
+    controls.addEventListener( 'change', render );
+
+    // placeModel(geometry);
 }
+
+function loopCondition() {
+    null
+};
 
 function animate() {
     requestAnimationFrame(animate);
+    // renderer.setAnimationLoop(loopCondition);
     renderer.render(scene, camera);
 }
 
@@ -193,6 +185,7 @@ function convertToIndexedBufferGeometry(geometry) {
 const ws = new WebSocket('ws://localhost:8080');
 ws.binaryType = 'arraybuffer'; // Important for receiving binary data
 
+init();
 ws.onopen = function() {
     console.log('WebSocket Client Connected');
     ws.send('Hi this is web client.');
@@ -203,6 +196,7 @@ ws.onmessage = function (event) {
     const buffer = event.data;
     const raw_geometry = loader.parse(buffer);
     const geometry = convertToIndexedBufferGeometry(raw_geometry);
-    init(geometry);
+    placeModel(geometry);
+    render();
+    animate();
 };
-
