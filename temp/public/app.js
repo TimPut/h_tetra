@@ -19,7 +19,7 @@ function init() {
     renderer = new THREE.WebGLRenderer();
     
     // Background color (over white implicit background)
-    renderer.setClearColor( 0xfdae44, 0.2);
+    renderer.setClearColor( 0xCFCDBE );
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
@@ -35,18 +35,31 @@ function init() {
     const loader = new GLTFLoader();
 
     // Materials
-    const pastelMaterial = new THREE.MeshBasicMaterial({
-        color: 0xAAD3E6, // Pastel blue
+    const faceFrontMaterial = new THREE.MeshBasicMaterial({
+        color: 0x43AA8B,
         transparent: true,
         opacity: 0.5
     });
 
+    const faceBackMaterial = new THREE.MeshBasicMaterial({
+        color: 0x4378AB,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.BackSide
+    });
+
+
     const wireframeMaterial = new THREE.LineBasicMaterial({
-        color: 0xFFE0BD, // Pastel orange
+        color: 0xFF6F59,
+    });
+
+    const vertexMaterial = new THREE.MeshBasicMaterial({
+        color: 0x254441
+        // depthTest: false
+
     });
 
     // Geometry
-    // const geometry = new THREE.BoxGeometry();
     const geometry = new THREE.BufferGeometry();
 
     const vertices = new Float32Array( [
@@ -67,8 +80,8 @@ function init() {
     geometry.setIndex( indices );
     geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
 
-    const cube = new THREE.Mesh(geometry, pastelMaterial);
-
+    const cube = new THREE.Mesh(geometry, faceFrontMaterial);
+    cube.add(new THREE.Mesh(geometry, faceBackMaterial));
 
 
     // Wireframe
@@ -76,23 +89,55 @@ function init() {
     const wireframeMesh = new THREE.LineSegments(wireframe, wireframeMaterial);
 
     // Vertices
-    const vertexMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFF5BA // Pastel yellow (for example)
-    });
-    const vertexGeometry = new THREE.SphereGeometry(0.02); // Small sphere
-    
-    // geometry.vertices.forEach(vertex => {
-        // const vertexMesh = new THREE.Mesh(vertexGeometry, vertexMaterial);
-        // vertexMesh.position.copy(vertex);
-        // cube.add(vertexMesh);
-    // });
+    const vertexGeometry = new THREE.SphereGeometry(0.04); // Small sphere
 
-
-
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-
-    cube.add(wireframeMesh);
+    // Add face data to scene
     scene.add(cube);
+
+
+    const indexAttribute = geometry.index;
+    const positionAttribute = geometry.attributes.position;
+
+    // Add edge data to scene
+    const edges = new Set(); // Use a Set to avoid duplicate edges
+
+    for (let i = 0; i < indexAttribute.count; i += 3) {
+        const a = indexAttribute.getX(i);
+        const b = indexAttribute.getX(i + 1);
+        const c = indexAttribute.getX(i + 2);
+
+        // Add edges: a-b, b-c, c-a
+        edges.add(`${Math.min(a, b)}-${Math.max(a, b)}`);
+        edges.add(`${Math.min(b, c)}-${Math.max(b, c)}`);
+        edges.add(`${Math.min(c, a)}-${Math.max(c, a)}`);
+    }
+
+    const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0xFFE0BD }); // Example color
+
+    edges.forEach(edge => {
+        const [startIdx, endIdx] = edge.split('-').map(Number);
+        
+        const startVertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, startIdx);
+        const endVertex = new THREE.Vector3().fromBufferAttribute(positionAttribute, endIdx);
+        
+        const path = new THREE.LineCurve3(startVertex, endVertex);
+        const tubeGeometry = new THREE.TubeGeometry(path, 1, 0.015, 4, false);
+        const tubeMesh = new THREE.Mesh(tubeGeometry, wireframeMaterial);
+        cube.add(tubeMesh);
+    });
+
+    // Add vertex data to scene
+    for (let i = 0; i < positionAttribute.count; i++) {
+        const vertex = new THREE.Vector3();
+        vertex.fromBufferAttribute(positionAttribute, i);
+        
+        const vertexMesh = new THREE.Mesh(vertexGeometry, vertexMaterial);
+        vertexMesh.position.copy(vertex);
+        cube.add(vertexMesh);
+    }
+
+
+
 
     camera.position.z = 5;
 
