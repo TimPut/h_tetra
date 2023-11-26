@@ -56,8 +56,6 @@ function placeModel(geometry) {
         edges.add(`${Math.min(c, a)}-${Math.max(c, a)}`);
     }
 
-    const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0xFFE0BD }); // Example color
-
     edges.forEach(edge => {
         const [startIdx, endIdx] = edge.split('-').map(Number);
         
@@ -79,6 +77,12 @@ function placeModel(geometry) {
         vertexMesh.position.copy(vertex);
         cube.add(vertexMesh);
     }
+
+
+    const originVertexGeometry = new THREE.SphereGeometry(0.3, 32, 32); // Small sphere
+    const originVertex = new THREE.Mesh(originVertexGeometry, vertexMaterial);
+    originVertex.position.set(0, 0, 0);
+    scene.add(originVertex);
 };
 
     // Materials
@@ -95,7 +99,6 @@ const faceBackMaterial = new THREE.MeshBasicMaterial({
     side: THREE.BackSide
 });
 
-
 const wireframeMaterial = new THREE.LineBasicMaterial({
     color: 0xFF6F59,
 });
@@ -106,6 +109,11 @@ const vertexMaterial = new THREE.MeshBasicMaterial({
     
 });
 
+const tubeMaterial = new THREE.MeshBasicMaterial({ color: 0xFFE0BD });
+
+const originMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+
 function init(geometry) {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -114,7 +122,7 @@ function init(geometry) {
     
     // Background color (over white implicit background)
     renderer.setClearColor( 0xCFCDBE );
-    camera.position.z = 100;
+    camera.position.z = 5;
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
@@ -130,13 +138,8 @@ function init(geometry) {
     // placeModel(geometry);
 }
 
-function loopCondition() {
-    null
-};
-
 function animate() {
     requestAnimationFrame(animate);
-    // renderer.setAnimationLoop(loopCondition);
     renderer.render(scene, camera);
 }
 
